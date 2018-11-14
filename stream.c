@@ -20,11 +20,16 @@ double get_time() {
 }
 
 void triad( const int N, const DATA_T scalar) {
-    int i;
+    int i, j;
 
+#pragma omp parallel for private(j)
+    for ( i = 0; i < N; i+=16 ) { // 16 becuase that's the vector length in AVX512
 
-    for ( i = 0; i < N; i++ ) {
-        a[i] = b[i] * scalar + c[i];
+#pragma vector nontemporal(a)
+#pragma omp simd
+        for ( j = 0; j < 16; j++ ){
+            a[i+j] = b[i+j] * scalar + c[i+j];
+        }
     }
 }
 
@@ -46,8 +51,13 @@ int main(int argc, char **argv) {
     if ( N % 16 != 0 ) N = N + ( 16 - ( N % 16 ) );
     ITRS = atol(argv[2]);
 
-    // Determine the number of threads
-    nthreads = 1;
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+            nthreads = omp_get_num_threads();
+        }
+    }
 
     printf("Stream triad, N=%llu  ITRS=%llu THREADS=%d\n", N, ITRS, nthreads);
 
