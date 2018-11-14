@@ -17,8 +17,11 @@ int fibonacci(const int n){
 
     int x, y;
 
+#pragma omp task shared(x) if(n>10)
     x = fibonacci(n - 1);
+#pragma omp task shared(y) if(n>10)
     y = fibonacci(n - 2);
+#pragma omp taskwait
 
     return (x + y);
 }
@@ -32,12 +35,24 @@ int main(int argc, char **argv){
 
     int fibN = atoi(argv[1]);
     int nthreads = 1;
-    int output
+    int output;
+
+#pragma omp parallel
+    {
+#pragma omp master
+        nthreads = omp_get_num_threads();
+    }
 
     printf("Fibonacci number generator.\n\tTarget number: %d\n\tNumber of threads: %d\n", fibN, nthreads);
 
     double start_time = get_time();
-    output = fibonacci(fibN);
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+        output = fibonacci(fibN);
+        }
+    }
     double end_time = get_time();
 
     printf("The %dth fibonacci number is: %d\n", fibN, output);
