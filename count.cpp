@@ -15,15 +15,42 @@ int main(int argc, char **argv) {
     int count_target = atoi(argv[2]);
 
     int nthreads = 1;
+#pragma omp parallel shared(nthreads)
+    {
+#pragma omp master
+        {
+            nthreads = omp_get_num_threads();
+        }
+    }
 
     printf("Task counter\n\tntasks = %d\n\tcount_target = %d\n", ntasks, count_target);
     printf("\tnthreads = %d\n", nthreads);
 
     int started = 0, completed = 0;
 
-    for (int n = 0; n < ntasks; n++ ) {
-        started++;
-        completed++;
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+#pragma omp taskgroup
+            {
+                for (int n = 0; n < ntasks; n++ ) {
+#pragma omp task
+                    {
+#pragma omp atomic
+                        started++;
+
+                        if ( completed == count_target ) {
+#pragma omp cancel taskgroup
+                        }
+#pragma omp cancellation point taskgroup
+
+#pragma omp atomic
+                        completed++;
+                    }
+                }
+            }
+        }
     }
 
     printf(" %d tasks were started\n", started);
