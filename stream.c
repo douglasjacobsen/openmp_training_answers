@@ -23,8 +23,7 @@ void triad( const int N, const DATA_T scalar) {
     int i;
 
 
-/*#pragma omp target map(tofrom:a[0:N],b[0:N],c[0:N],scalar)*/
-#pragma omp target map(to:b[0:N],c[0:N],scalar) map(tofrom:a[0:N])
+#pragma omp target
     for ( i = 0; i < N; i++ ) {
         a[i] = b[i] * scalar + c[i];
     }
@@ -63,13 +62,21 @@ int main(int argc, char **argv) {
         c[i] = i*i*i;
     }
 
+#pragma omp target enter data map(to:a[0:N], b[0:N], c[0:N])
+
     // Warm up
+/*#pragma omp target data map(to:b[0:N],c[0:N]) map(tofrom:a[0:N])*/
+    /*{*/
     for ( i = 0; i < 10; i++ ) {
         triad(N, 8*i);
     }
+    /*}*/
 
     double time_per_triad = 0.0;
     double best_time_per_triad = 999999999.00;
+
+/*#pragma omp target data map(to:b[0:N],c[0:N]) map(tofrom:a[0:N])*/
+    /*{*/
     for ( i = 0; i < ITRS; i++ ) {
         start = get_time();
         triad(N, 9*i);
@@ -78,6 +85,9 @@ int main(int argc, char **argv) {
         time_per_triad += triad_time;
         if ( triad_time < best_time_per_triad ) best_time_per_triad = triad_time;
     }
+    /*}*/
+
+#pragma omp target exit data map(from:a[0:N])
 
     FILE* null = fopen("/dev/null", "wb");
     fwrite(a, sizeof(DATA_T), N, null);
