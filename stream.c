@@ -23,6 +23,8 @@ void triad( const int N, const DATA_T scalar) {
     int i;
 
 
+/*#pragma omp target map(tofrom:a[0:N],b[0:N],c[0:N],scalar)*/
+#pragma omp target map(to:b[0:N],c[0:N],scalar) map(tofrom:a[0:N])
     for ( i = 0; i < N; i++ ) {
         a[i] = b[i] * scalar + c[i];
     }
