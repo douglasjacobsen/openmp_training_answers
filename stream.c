@@ -23,7 +23,7 @@ void triad( const int N, const DATA_T scalar) {
     int i;
 
 
-#pragma omp target teams distribute
+#pragma omp target teams distribute parallel for
     for ( i = 0; i < N; i++ ) {
         a[i] = b[i] * scalar + c[i];
     }
