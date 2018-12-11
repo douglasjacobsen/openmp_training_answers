@@ -30,14 +30,23 @@ void setup_table( const int n_values, const int n_bins, const int search_val ){
     }
 
     // Fill the table with a bunch of random numbers
-    for ( int i = 0; i < n_bins; i++ ){
-        for ( int j = 0; j < n_values / n_bins; j++ ) {
-            int val = ( i * j ) % n_values;
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+#pragma omp taskgroup
+            for ( int i = 0; i < n_bins; i++ ){
 
-            if ( val == search_val ) {
-                val--;
+#pragma omp task
+                for ( int j = 0; j < n_values / n_bins; j++ ) {
+                    int val = ( i * j ) % n_values;
+
+                    if ( val == search_val ) {
+                        val--;
+                    }
+                    table[i].push_back( val );
+                }
             }
-            table[i].push_back( val );
         }
     }
     //for ( int i = 0; i < n_values; i++ ){
@@ -57,13 +66,25 @@ void setup_table( const int n_values, const int n_bins, const int search_val ){
 
 void search_table( const int search_val ) {
 
-    for ( int i = 0; i < table.size(); i++ ) {
-        for ( int j = 0; j < table[i].size(); j++ ){
-            if ( table[i][j] == search_val ) {
-                printf("Value found in bin %d at index %d\n", i, j);
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+#pragma omp taskgroup
+            for ( int i = 0; i < table.size(); i++ ) {
+#pragma omp task firstprivate(search_val)
+                {
+#pragma omp cancellation point taskgroup
+                    for ( int j = 0; j < table[i].size(); j++ ){
+                        if ( table[i][j] == search_val ) {
+                            printf("Value found in bin %d at index %d\n", i, j);
+#pragma omp cancel taskgroup
+                        }
+                    }
+                    searched[i] = 1;
+                }
             }
         }
-        searched[i] = 1;
     }
 
     int searched_bins = 0;
@@ -93,6 +114,13 @@ int main ( int argc, char **argv ){
     int number_of_bins = atoi(argv[2]);
     int search_val = atoi(argv[3]);
     int nthreads = 1;
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+            nthreads = omp_get_num_threads();
+        }
+    }
 
     printf("Table search example\n");
     printf("   Table has %d bins\n", number_of_bins);
